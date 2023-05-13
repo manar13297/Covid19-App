@@ -1,0 +1,88 @@
+body {
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+    min-height: 100vh;
+    background-color: whitesmoke;
+}
+header{
+    height: 2.7cm;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    font-family: 'Times New Roman', Times, serif;
+    font-style: oblique;
+    font-size: 135%;
+    background-color: red;
+    color: whitesmoke;
+}
+#title{
+    text-align: center;
+}
+#container{
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    align-content: space-around;
+    justify-content: space-around;
+}
+footer{
+    position: fixed;
+    text-align: center;
+    background-color: red;
+    font-size: smaller;
+    font-family: cursive;
+    color: whitesmoke;
+    bottom: 0px;
+    width: 100vw;
+    height: 0.5cm;
+}
+#side{
+    background-color: white;
+    border: 2px solid grey;
+    margin: 10px;
+    margin-top: 30px;
+    width: 6.7cm;
+    height: 11.5cm;
+    overflow-y: scroll;
+    scrollbar-color: black;
+    scrollbar-width: thin;
+}
+#content{
+    margin: 10px;
+    width: 30cm;
+    height: 13cm;
+    border: 1px solid grey;
+    overflow-y: scroll;
+    scrollbar-width: thin;
+    scrollbar-color: black;
+}
+img{
+    width: 120px;
+    height: 100px;
+}
+#filiere{
+    text-align: center;
+    padding-right: 20px;
+}
+h5{
+    margin-top: 20px;
+}
+canvas{
+    background-color: white;
+}
+#side div{
+    margin: 0.5px;
+    border: 1px solid white;
+    background-color: rgb(212, 84, 84);
+    color: whitesmoke;
+    font-size: x-large;
+}
+#side div:hover{
+    background-color: white;
+    font-weight: bold;
+    color: rgb(212, 84, 84);
+    border: 2px solid rgb(212, 84, 84);
+}
