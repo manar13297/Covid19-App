@@ -3,31 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>statistiques-Covid19</title>
+    <title>COVID-19 Statistics Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
         <div id='logo'>
-            <img src="estLogo.jpeg" alt="">
+            <img src="estLogo.jpeg" alt="EST Essaouira Logo">
         </div>
         <div id='title'>
-            <h1>S T A T I S T I Q U E S &nbspC O V I D 1 9</h1>
+            <h1>COVID-19 STATISTICS DASHBOARD</h1>
         </div>
         <div id='filiere'>
-            <h5> IDSD 2020</h5>
+            <h5>IDSD 2020</h5>
             <h6>EST Essaouira</h6>
         </div>
     </header>
-    <div id='container'>
-        <div id='side'>
-        </div>
-        <div id='content'>
-        </div>
+
+    <div id='error-message' class='error-message' role="alert" aria-live="polite" style="display: none;">
+        <span id='error-text'></span>
+        <button id='error-close' aria-label="Close error message">&times;</button>
     </div>
+
+    <div id='container'>
+        <aside id='sidebar'>
+            <div id='search-container'>
+                <input
+                    type='text'
+                    id='search-input'
+                    placeholder='Search countries...'
+                    aria-label='Search countries'
+                    role='searchbox'
+                >
+                <span id='search-results-count' class='results-count' aria-live="polite"></span>
+            </div>
+            <div id='loading-indicator' class='loading' style="display: none;">
+                <div class='spinner'></div>
+                <p>Loading countries...</p>
+            </div>
+            <div id='side' role='region' aria-label='List of countries'></div>
+        </aside>
+        <main id='content-area'>
+            <div id='content' role='region' aria-label='COVID-19 chart visualization'></div>
+        </main>
+    </div>
+
     <footer>
-        by Manar-Elhouda BADRE-EDDINE
+        <p>by Manar-Elhouda BADRE-EDDINE</p>
     </footer>
 </body>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
 <script src="script.js"></script>
+</html>

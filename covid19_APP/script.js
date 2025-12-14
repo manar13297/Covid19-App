@@ -1,129 +1,321 @@
-let listPays = document.getElementById('side');
-let httReq = new XMLHttpRequest();
-// creation d'un canvas'
-/******************************************/
-var cnv = document.createElement('canvas');
-cnv.setAttribute('id','myChart');
-cnv.setAttribute('width','25cm');
-cnv.setAttribute('height','12cm');
-/**************************************************/
-var contentdiv = document.getElementById('content');
-contentdiv.appendChild(cnv);
-/**************************************************/
+// DOM Elements
+const listPays = document.getElementById('side');
+const searchInput = document.getElementById('search-input');
+const searchResultsCount = document.getElementById('search-results-count');
+const errorMessage = document.getElementById('error-message');
+const errorText = document.getElementById('error-text');
+const errorClose = document.getElementById('error-close');
+const loadingIndicator = document.getElementById('loading-indicator');
+const contentDiv = document.getElementById('content');
 
-// creation du chart par defaut 'Morocco'
-var ctx = document.getElementById('myChart').getContext('2d');
-var myChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: [],
-        datasets: []
-    },
-    options: {
-        title: {
-            display: true,
-            text: 'Morocco',
-            align: 'center',
-            position: 'top',
-            fontStyle: 'italic',
-            fontSize: 30,
-            fontColor: 'blue'
+// State
+let allCountries = [];
+let filteredCountries = [];
+let currentChart = null;
+let selectedCountryCode = null;
+
+// Initialize chart
+function initChart() {
+    const cnv = document.createElement('canvas');
+    cnv.setAttribute('id', 'myChart');
+    contentDiv.innerHTML = '';
+    contentDiv.appendChild(cnv);
+
+    const ctx = document.getElementById('myChart').getContext('2d');
+    currentChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: []
         },
-        legend:{
-            labels: {
-                fontStyle: 'bold'
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'COVID-19 Statistics',
+                    font: {
+                        size: 18,
+                        weight: 'bold'
+                    },
+                    color: '#333'
+                },
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        },
+                        padding: 15,
+                        usePointStyle: true
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Cases'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
             }
         }
+    });
+
+    return currentChart;
+}
+
+// Display error message
+function showError(message) {
+    errorText.textContent = message;
+    errorMessage.style.display = 'flex';
+    console.error('Error:', message);
+}
+
+// Hide error message
+function hideError() {
+    errorMessage.style.display = 'none';
+}
+
+// Show loading indicator
+function showLoading() {
+    loadingIndicator.style.display = 'flex';
+}
+
+// Hide loading indicator
+function hideLoading() {
+    loadingIndicator.style.display = 'none';
+}
+
+// Update chart with COVID data
+function updateChart(countries, data) {
+    if (!data || data.length === 0) {
+        showError('No data available for this country.');
+        return;
     }
 
+    try {
+        const dates = [];
+        const confirmed = [];
+        const deaths = [];
+        const recovered = [];
+        const active = [];
+
+        data.forEach((record) => {
+            const dateStr = record.Date.toString();
+            dates.push(dateStr.slice(8, 10) + '/' + dateStr.slice(5, 7));
+            confirmed.push(record.Confirmed || 0);
+            deaths.push(record.Deaths || 0);
+            recovered.push(record.Recovered || 0);
+            active.push(record.Active || 0);
+        });
+
+        const countryName = data[0].Country || 'Unknown Country';
+
+        const datasets = [
+            {
+                label: 'Confirmed Cases',
+                data: confirmed,
+                borderColor: '#1976d2',
+                backgroundColor: 'rgba(25, 118, 210, 0.05)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            },
+            {
+                label: 'Recovered Cases',
+                data: recovered,
+                borderColor: '#388e3c',
+                backgroundColor: 'rgba(56, 142, 60, 0.05)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            },
+            {
+                label: 'Deaths',
+                data: deaths,
+                borderColor: '#d32f2f',
+                backgroundColor: 'rgba(211, 47, 47, 0.05)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            },
+            {
+                label: 'Active Cases',
+                data: active,
+                borderColor: '#f57c00',
+                backgroundColor: 'rgba(245, 124, 0, 0.05)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            }
+        ];
+
+        currentChart.data.labels = dates;
+        currentChart.data.datasets = datasets;
+        currentChart.options.plugins.title.text = countryName + ' - COVID-19 Statistics';
+        currentChart.update();
+        hideError();
+    } catch (error) {
+        showError('Error updating chart: ' + error.message);
+    }
+}
+
+// Fetch country data and update chart
+function onCountryClicked(countryCode) {
+    if (!countryCode) return;
+
+    selectedCountryCode = countryCode;
+    updateActiveButton();
+    showLoading();
+
+    try {
+        fetch('https://api.covid19api.com/dayone/country/' + countryCode)
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.status);
+                }
+                return response.json();
+            })
+            .then((data) => {
+                updateChart(allCountries, data);
+                hideLoading();
+            })
+            .catch((error) => {
+                hideLoading();
+                showError('Failed to fetch data for this country. ' + error.message);
+            });
+    } catch (error) {
+        hideLoading();
+        showError('Error: ' + error.message);
+    }
+}
+
+// Update active button styling
+function updateActiveButton() {
+    document.querySelectorAll('#side div').forEach((btn) => {
+        if (btn.getAttribute('id') === selectedCountryCode) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+// Filter countries based on search input
+function filterCountries() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+
+    document.querySelectorAll('#side div').forEach((countryBtn) => {
+        const countryName = countryBtn.textContent.toLowerCase();
+        if (searchTerm === '' || countryName.includes(searchTerm)) {
+            countryBtn.classList.remove('hidden');
+        } else {
+            countryBtn.classList.add('hidden');
+        }
+    });
+
+    // Update results count
+    const visibleCount = document.querySelectorAll('#side div:not(.hidden)').length;
+    if (searchTerm) {
+        searchResultsCount.textContent = `${visibleCount} result${visibleCount !== 1 ? 's' : ''}`;
+    } else {
+        searchResultsCount.textContent = '';
+    }
+}
+
+// Fetch and populate countries list
+function loadCountries() {
+    showLoading();
+
+    try {
+        fetch('https://api.covid19api.com/countries')
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.status);
+                }
+                return response.json();
+            })
+            .then((data) => {
+                if (!Array.isArray(data)) {
+                    throw new Error('Unexpected data format');
+                }
+
+                allCountries = data.sort((a, b) => a.Country.localeCompare(b.Country));
+
+                // Clear existing countries
+                listPays.innerHTML = '';
+
+                // Add countries to list
+                allCountries.forEach((country) => {
+                    const countryBtn = document.createElement('div');
+                    countryBtn.setAttribute('id', country.ISO2);
+                    countryBtn.setAttribute('role', 'button');
+                    countryBtn.setAttribute('tabindex', '0');
+                    countryBtn.setAttribute('aria-label', 'View data for ' + country.Country);
+                    countryBtn.textContent = country.Country;
+
+                    // Click event
+                    countryBtn.addEventListener('click', () => {
+                        onCountryClicked(country.ISO2);
+                    });
+
+                    // Keyboard support
+                    countryBtn.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onCountryClicked(country.ISO2);
+                        }
+                    });
+
+                    listPays.appendChild(countryBtn);
+                });
+
+                hideLoading();
+
+                // Load default country (Morocco)
+                onCountryClicked('MA');
+                hideError();
+            })
+            .catch((error) => {
+                hideLoading();
+                showError('Failed to load countries: ' + error.message);
+            });
+    } catch (error) {
+        hideLoading();
+        showError('Error: ' + error.message);
+    }
+}
+
+// Event listeners
+searchInput.addEventListener('input', filterCountries);
+errorClose.addEventListener('click', hideError);
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        hideError();
+    }
 });
 
-/******************************************************************************/
-function updateChart(myChart , resp){
-    let date = new Array(); //date Array pour labels
-
-    let ConfirmedCases = new Array();
-    let DeathsCases = new Array();
-    let RecoveredCases = new Array();
-    let ActiveCases = new Array();
-    //remplir les tableaux des cas
-    for(i=0;i<resp.length;i++){
-        let elem = (resp[i].Date).toString();
-        date[i] = elem.slice(8,10)+'/'+elem.slice(5,7);
-        ConfirmedCases[i] = resp[i].Confirmed
-        DeathsCases[i] = resp[i].Deaths
-        RecoveredCases[i] = resp[i].Recovered
-        ActiveCases[i] = resp[i].Active
-    };
-
-    let ChartDatasets= [{
-        label: 'Confirmés',
-        data: ConfirmedCases,
-        borderColor: 'blue',
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        pointStyle: 'star'
-        },{
-        label: 'Géris',
-        data: RecoveredCases,
-        borderColor: 'green',
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        pointStyle: 'star'
-    },{
-        label: 'Décés',
-        data: DeathsCases,
-        borderColor: 'red',
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        pointStyle: 'star'
-    },{ 
-        label: 'Active',
-        data: ActiveCases,
-        borderColor: 'yellow',
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        pointStyle: 'star'
-    }];
-
-    myChart.data.labels = date;
-    myChart.data.datasets = ChartDatasets;
-    myChart.options.title.text = resp[0].Country;
-    myChart.update();
-}
-/*********************************************************************************/
-
-function paysClicked(e){
-    if(e==null) code = 'MA'
-    else code = e.target.getAttribute('id')
-    let httpReq = new XMLHttpRequest();
-    httpReq.open('GET' , 'https://api.covid19api.com/dayone/country/'+code, true);
-    httpReq.onreadystatechange = function(){
-        if(httpReq.readyState == XMLHttpRequest.DONE && httpReq.status == 200){
-            let resp = JSON.parse(httpReq.response);
-            updateChart(myChart,resp)
-        }
-    }    
-    httpReq.send();
-}
-
-/********************************************************************************/
-
-httReq.open("GET" , "https://api.covid19api.com/countries" , true);
-httReq.onreadystatechange = function(){
-    if(httReq.readyState == XMLHttpRequest.DONE && httReq.status == 200){
-        var resp = JSON.parse(httReq.response);
-        resp = resp.sort((a,b)=>a.Country<b.Country?-1:1)
-        resp.forEach(e => {
-            let d = document.createElement('div');
-            d.setAttribute('id' , e.ISO2)
-            d.innerHTML = e.Country;
-            d.addEventListener('click' , paysClicked);
-            listPays.appendChild(d);
-            
-        });
-        paysClicked(null);
-}}
-httReq.send();
-
-/********************************************************************************/
+// Initialize app
+initChart();
+loadCountries();
