@@ -188,7 +188,16 @@ function onCountryClicked(countryCode) {
     showLoading();
 
     try {
-        fetch('https://api.covid19api.com/dayone/country/' + countryCode)
+        // Find country name from code
+        const country = allCountries.find(c => c.countryInfo.iso2 === countryCode);
+        if (!country) {
+            hideLoading();
+            showError('Country not found.');
+            return;
+        }
+
+        const countryName = country.country;
+        fetch('https://disease.sh/v3/covid-19/historical/' + countryName + '?lastdays=all')
             .then((response) => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok: ' + response.status);
@@ -196,7 +205,7 @@ function onCountryClicked(countryCode) {
                 return response.json();
             })
             .then((data) => {
-                updateChart(allCountries, data);
+                formatAndUpdateChart(countryName, data);
                 hideLoading();
             })
             .catch((error) => {
@@ -206,6 +215,93 @@ function onCountryClicked(countryCode) {
     } catch (error) {
         hideLoading();
         showError('Error: ' + error.message);
+    }
+}
+
+// Format disease.sh data and update chart
+function formatAndUpdateChart(countryName, data) {
+    if (!data || !data.timeline || !data.timeline.cases) {
+        showError('No data available for this country.');
+        return;
+    }
+
+    try {
+        const timeline = data.timeline;
+        const dates = [];
+        const confirmed = [];
+        const deaths = [];
+        const recovered = [];
+
+        // Convert object to arrays
+        const caseEntries = Object.entries(timeline.cases);
+        caseEntries.forEach(([date, cases]) => {
+            const [month, day, year] = date.split('/');
+            dates.push(day + '/' + month);
+            confirmed.push(cases || 0);
+            deaths.push(timeline.deaths[date] || 0);
+            recovered.push(timeline.recovered[date] || 0);
+        });
+
+        // Calculate active cases
+        const active = [];
+        for (let i = 0; i < confirmed.length; i++) {
+            active.push(Math.max(0, confirmed[i] - deaths[i] - recovered[i]));
+        }
+
+        const datasets = [
+            {
+                label: 'Confirmed Cases',
+                data: confirmed,
+                borderColor: '#1976d2',
+                backgroundColor: 'rgba(25, 118, 210, 0.05)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            },
+            {
+                label: 'Recovered Cases',
+                data: recovered,
+                borderColor: '#388e3c',
+                backgroundColor: 'rgba(56, 142, 60, 0.05)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            },
+            {
+                label: 'Deaths',
+                data: deaths,
+                borderColor: '#d32f2f',
+                backgroundColor: 'rgba(211, 47, 47, 0.05)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            },
+            {
+                label: 'Active Cases',
+                data: active,
+                borderColor: '#f57c00',
+                backgroundColor: 'rgba(245, 124, 0, 0.05)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            }
+        ];
+
+        currentChart.data.labels = dates;
+        currentChart.data.datasets = datasets;
+        currentChart.options.plugins.title.text = countryName + ' - COVID-19 Statistics';
+        currentChart.update();
+        hideError();
+    } catch (error) {
+        showError('Error updating chart: ' + error.message);
     }
 }
 
@@ -247,7 +343,7 @@ function loadCountries() {
     showLoading();
 
     try {
-        fetch('https://api.covid19api.com/countries')
+        fetch('https://disease.sh/v3/covid-19/countries')
             .then((response) => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok: ' + response.status);
@@ -259,7 +355,8 @@ function loadCountries() {
                     throw new Error('Unexpected data format');
                 }
 
-                allCountries = data.sort((a, b) => a.Country.localeCompare(b.Country));
+                // Sort by country name
+                allCountries = data.sort((a, b) => a.country.localeCompare(b.country));
 
                 // Clear existing countries
                 listPays.innerHTML = '';
@@ -267,22 +364,22 @@ function loadCountries() {
                 // Add countries to list
                 allCountries.forEach((country) => {
                     const countryBtn = document.createElement('div');
-                    countryBtn.setAttribute('id', country.ISO2);
+                    countryBtn.setAttribute('id', country.countryInfo.iso2);
                     countryBtn.setAttribute('role', 'button');
                     countryBtn.setAttribute('tabindex', '0');
-                    countryBtn.setAttribute('aria-label', 'View data for ' + country.Country);
-                    countryBtn.textContent = country.Country;
+                    countryBtn.setAttribute('aria-label', 'View data for ' + country.country);
+                    countryBtn.textContent = country.country;
 
                     // Click event
                     countryBtn.addEventListener('click', () => {
-                        onCountryClicked(country.ISO2);
+                        onCountryClicked(country.countryInfo.iso2);
                     });
 
                     // Keyboard support
                     countryBtn.addEventListener('keypress', (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            onCountryClicked(country.ISO2);
+                            onCountryClicked(country.countryInfo.iso2);
                         }
                     });
 
